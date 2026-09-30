@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wedding Tracker</title>
+<meta name="theme-color" content="#1f2a44">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#f6f3ee;--card:#fff;--ink:#1d2230;--muted:#6b7080;--line:#e4dfd6;--accent:#1f2a44;--gold:#b88a3b;--good:#2f7d4f;--warn:#c27a12;--bad:#b3362c}
+@media (prefers-color-scheme:dark){:root{--bg:#12151d;--card:#1b1f2a;--ink:#eceaf0;--muted:#9aa0b0;--line:#2a2f3c;--accent:#9fb3e0;--gold:#d8ad5c}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:84px}
+header{padding:20px 16px 8px}
+h1{margin:0;font-size:1.35rem}
+.sub{color:var(--muted);font-size:.9rem}
+main{padding:0 16px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+.card h2{font-size:1rem;margin:0 0 8px}
+.big{font-size:2.4rem;font-weight:700;color:var(--gold);line-height:1}
+.row{display:flex;gap:8px;align-items:center}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:600;font-size:.85rem;color:#fff}
+.low{background:var(--good)}.mid{background:var(--warn)}.high{background:var(--bad)}
+.hours{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.hr{min-width:46px;text-align:center;font-size:.78rem;border:1px solid var(--line);border-radius:10px;padding:6px 2px}
+.bar{height:36px;display:flex;align-items:flex-end;justify-content:center}
+.bar i{display:block;width:12px;border-radius:3px;background:var(--accent)}
+.days{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px}
+.day{border:1px solid var(--line);border-radius:10px;padding:6px;font-size:.8rem;text-align:center}
+.day.w{border-color:var(--gold);border-width:2px}
+.muted{color:var(--muted);font-size:.85rem}
+ul.list{list-style:none;padding:0;margin:0}
+ul.list li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+ul.list li:last-child{border:0}
+ul.list li.done span.t{text-decoration:line-through;color:var(--muted)}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--gold);flex:none;margin-top:1px}
+span.t{flex:1}
+button.x{background:none;border:0;color:var(--muted);font-size:1.1rem;padding:0 4px}
+.add{display:flex;gap:6px;margin-top:8px}
+.add input,.add select{flex:1;min-width:0;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+.add button,.btn{padding:9px 14px;border:0;border-radius:10px;background:var(--accent);color:var(--bg);font:inherit;font-weight:600}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:0;padding:12px 0;color:var(--muted);font:inherit;font-size:.82rem}
+nav button.on{color:var(--gold);font-weight:700}
+section{display:none}section.on{display:block}
+.prog{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--gold)}
+a{color:var(--accent)}
+.money{font-variant-numeric:tabular-nums}
+.tip{padding:8px 0;border-bottom:1px solid var(--line)}.tip:last-child{border:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Aaron &amp; Chelsea · 10 Oct</h1>
+  <div class="sub" id="countSub"></div>
+</header>
+<main>
+<section id="home" class="on">
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div><div class="big" id="daysLeft">–</div><div class="muted">days to go</div></div>
+      <div style="text-align:right"><div id="doneCount" style="font-weight:700">–</div><div class="muted">tasks done</div></div>
+    </div>
+    <div class="prog" style="margin-top:10px"><i id="progBar" style="width:0"></i></div>
+  </div>
+
+  <div class="card">
+    <h2>☔ Rain threat on the day</h2>
+    <div id="wxVerdict" class="muted">Loading forecast…</div>
+    <div class="hours" id="wxHours" style="margin-top:10px"></div>
+    <div class="muted" id="wxMeta" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>📅 The run-up</h2>
+    <div class="days" id="wxDays"></div>
+    <div class="muted" style="margin-top:6px">Gold border = wedding day. Friday is room set-up day.</div>
+  </div>
+
+  <div class="card">
+    <h2>💡 Good to know</h2>
+    <div id="tips" class="muted">Waiting for forecast…</div>
+  </div>
+
+  <div class="card">
+    <h2>🔗 Handy checks</h2>
+    <div class="tip"><a href="https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings" target="_blank" rel="noopener">Met Office weather warnings</a></div>
+    <div class="tip"><a href="https://www.metoffice.gov.uk/weather/forecast/gcqeq0tx4" target="_blank" rel="noopener">Met Office forecast – Wythall</a></div>
+    <div class="tip"><a href="https://one.network/" target="_blank" rel="noopener">Roadworks &amp; closures (one.network)</a></div>
+    <div class="tip"><a href="https://www.nationalrail.co.uk/status-and-disruptions/" target="_blank" rel="noopener">Rail disruptions (for travelling guests)</a></div>
+  </div>
+</section>
+
+<section id="tasks">
+  <div id="taskGroups"></div>
+  <div class="card">
+    <h2>Add a task</h2>
+    <div class="add">
+      <input id="newTask" placeholder="e.g. Pick up flowers">
+      <select id="newWhen"></select>
+    </div>
+    <div class="add"><button id="addTask" style="flex:1">Add</button></div>
+  </div>
+</section>
+
+<section id="money">
+  <div class="card">
+    <h2>💷 Payments</h2>
+    <ul class="list" id="moneyList"></ul>
+    <div class="muted money" id="moneyTotal" style="margin-top:8px"></div>
+    <div class="add"><input id="newPay" placeholder="What"><input id="newAmt" inputmode="decimal" placeholder="£ due" style="max-width:90px"></div>
+    <div class="add"><button id="addPay" style="flex:1">Add payment</button></div>
+  </div>
+</section>
+
+<section id="plan">
+  <div class="card">
+    <h2>🕰️ Running order</h2>
+    <ul class="list" id="planList"></ul>
+    <div class="add"><input id="newTime" type="time" style="max-width:110px"><input id="newEvent" placeholder="What happens"></div>
+    <div class="add"><button id="addPlan" style="flex:1">Add to running order</button></div>
+  </div>
+  <div class="card">
+    <h2>📞 Key contacts</h2>
+    <ul class="list" id="contactList"></ul>
+    <div class="add"><input id="newCName" placeholder="Who / role"><input id="newCNum" type="tel" placeholder="Number"></div>
+    <div class="add"><button id="addContact" style="flex:1">Add contact</button></div>
+  </div>
+  <div class="card">
+    <button class="btn" id="exportBtn">Back up data</button>
+    <label class="btn" style="display:inline-block;margin-left:6px">Restore<input type="file" id="importFile" accept="application/json" hidden></label>
+    <div class="muted" style="margin-top:8px">Everything is stored on this phone only.</div>
+  </div>
+</section>
+</main>
+
+<nav>
+  <button data-s="home" class="on">🏠<br>Home</button>
+  <button data-s="tasks">✅<br>Tasks</button>
+  <button data-s="money">💷<br>Money</button>
+  <button data-s="plan">🕰️<br>The Day</button>
+</nav>
+
+<script>
+const WEDDING = '2026-10-10';
+const LAT = 52.394, LON = -1.891; // Hollywood / Wythall
+const WHEN = {week:'This week (by Sun 4 Oct)', run:'Mon–Thu (5–8 Oct)', fri:'Friday 9 Oct – set-up', sat:'Saturday morning', after:'After the wedding'};
+
+const DEFAULTS = {
+  tasks:[
+    ['Collect suit with shortened sleeves','week'],
+    ["Girls' dresses arrived and tried on",'week'],
+    ['Confirm food menu and numbers with neighbour','week'],
+    ['Pay remaining £300 on dress','week'],
+    ['Confirm final numbers with British Legion','week'],
+    ['Print guest lists for the two ushers','week'],
+    ['Confirm timings and shot list with photographer','week'],
+    ['Confirm DJ times, first dance and must-plays','week'],
+    ['Check with pastor: arrival time, rehearsal, documents needed','week'],
+    ['Make sure both witnesses know times and where to be','week'],
+    ['Decide rain plan for the car park area','week'],
+    ['Print photo scavenger hunt prompt cards','run'],
+    ['Withdraw £200 cash for DJ – labelled envelope','run'],
+    ['Card/money box for gifts sorted','run'],
+    ['Chair covers washed and packed','run'],
+    ['Evaluate Legion room: measure walls, cover/move decorations','fri'],
+    ['Test how the room looks dimmed','fri'],
+    ['Drop decor and chair covers at venue','fri'],
+    ['Lay out outfits, shoes, cufflinks; charge phones','fri'],
+    ['Rings – decide who holds them','sat'],
+    ['DJ cash envelope + speech notes in pocket','sat'],
+    ['Emergency kit: safety pins, plasters, painkillers, umbrella, tissues, charger','sat'],
+    ['Return borrowed items','after'],
+    ['Thank-you messages','after'],
+    ['Raise the decor issue with the Legion committee','after']
+  ].map(([t,w],i)=>({id:'d'+i,t,w,done:false})),
+  money:[
+    {id:'m1',t:'Photographer (deposit paid)',a:200,paid:false},
+    {id:'m2',t:'DJ – cash on the night',a:200,paid:false},
+    {id:'m3',t:'Dress balance',a:300,paid:false}
+  ],
+  plan:[
+    {id:'p1',time:'',t:'Ceremony – Hollywood Christian Life Centre'},
+    {id:'p2',time:'',t:'Reception – British Legion'}
+  ],
+  contacts:[]
+};
+
+let S;
+function load(){try{S=JSON.parse(localStorage.getItem('wt'))}catch(e){} if(!S) S=JSON.parse(JSON.stringify(DEFAULTS));}
+function save(){try{localStorage.setItem('wt',JSON.stringify(S))}catch(e){}}
+load();
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+function countdown(){
+  const now=new Date(); const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const w=new Date(2026,9,10); const d=Math.round((w-today)/864e5);
+  $('daysLeft').textContent=d>0?d:(d===0?'Today!':'💍');
+  $('countSub').textContent=d>0?`Saturday 10 October 2026`:(d===0?'Today is the day 🎉':'Married!');
+  const done=S.tasks.filter(t=>t.done).length;
+  $('doneCount').textContent=`${done}/${S.tasks.length}`;
+  $('progBar').style.width=(S.tasks.length?done/S.tasks.length*100:0)+'%';
+}
+
+function renderTasks(){
+  $('taskGroups').innerHTML=Object.entries(WHEN).map(([k,label])=>{
+    const items=S.tasks.filter(t=>t.w===k); if(!items.length) return '';
+    const n=items.filter(t=>t.done).length;
+    return `<div class="card"><h2>${label} <span class="muted">${n}/${items.length}</span></h2><ul class="list">${items.map(t=>
+      `<li class="${t.done?'done':''}"><input type="checkbox" data-task="${t.id}" ${t.done?'checked':''}><span class="t">${esc(t.t)}</span><button class="x" data-deltask="${t.id}">✕</button></li>`).join('')}</ul></div>`;
+  }).join('');
+  countdown();
+}
+$('newWhen').innerHTML=Object.entries(WHEN).map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
+$('addTask').onclick=()=>{const t=$('newTask').value.trim(); if(!t)return; S.tasks.push({id:uid(),t,w:$('newWhen').value,done:false}); $('newTask').value=''; save(); renderTasks();};
+
+function renderMoney(){
+  $('moneyList').innerHTML=S.money.map(m=>`<li class="${m.paid?'done':''}"><input type="checkbox" data-pay="${m.id}" ${m.paid?'checked':''}><span class="t">${esc(m.t)}</span><span class="money">£${(+m.a).toFixed(0)}</span><button class="x" data-delpay="${m.id}">✕</button></li>`).join('');
+  const left=S.money.filter(m=>!m.paid).reduce((s,m)=>s+(+m.a||0),0);
+  $('moneyTotal').textContent=`Still to pay: £${left.toFixed(0)}`;
+}
+$('addPay').onclick=()=>{const t=$('newPay').value.trim(),a=parseFloat($('newAmt').value)||0; if(!t)return; S.money.push({id:uid(),t,a,paid:false}); $('newPay').value=$('newAmt').value=''; save(); renderMoney();};
+
+function renderPlan(){
+  S.plan.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+  $('planList').innerHTML=S.plan.map(p=>`<li><input type="time" value="${p.time}" data-ptime="${p.id}" style="max-width:100px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:4px"><span class="t">${esc(p.t)}</span><button class="x" data-delplan="${p.id}">✕</button></li>`).join('');
+  $('contactList').innerHTML=S.contacts.length?S.contacts.map(c=>`<li><span class="t">${esc(c.n)}</span><a href="tel:${esc(c.num)}">${esc(c.num)}</a><button class="x" data-delc="${c.id}">✕</button></li>`).join(''):'<li class="muted">Add the photographer, DJ, venue, food and ushers so it\'s all in one place.</li>';
+}
+$('addPlan').onclick=()=>{const t=$('newEvent').value.trim(); if(!t)return; S.plan.push({id:uid(),time:$('newTime').value,t}); $('newEvent').value=$('newTime').value=''; save(); renderPlan();};
+$('addContact').onclick=()=>{const n=$('newCName').value.trim(),num=$('newCNum').value.trim(); if(!n)return; S.contacts.push({id:uid(),n,num}); $('newCName').value=$('newCNum').value=''; save(); renderPlan();};
+
+document.addEventListener('change',e=>{
+  const d=e.target.dataset;
+  if(d.task){S.tasks.find(t=>t.id===d.task).done=e.target.checked; save(); renderTasks();}
+  if(d.pay){S.money.find(m=>m.id===d.pay).paid=e.target.checked; save(); renderMoney();}
+  if(d.ptime){S.plan.find(p=>p.id===d.ptime).time=e.target.value; save(); renderPlan();}
+});
+document.addEventListener('click',e=>{
+  const d=e.target.dataset; let hit=true;
+  if(d.deltask) S.tasks=S.tasks.filter(t=>t.id!==d.deltask);
+  else if(d.delpay) S.money=S.money.filter(m=>m.id!==d.delpay);
+  else if(d.delplan) S.plan=S.plan.filter(p=>p.id!==d.delplan);
+  else if(d.delc) S.contacts=S.contacts.filter(c=>c.id!==d.delc);
+  else hit=false;
+  if(hit){save(); renderTasks(); renderMoney(); renderPlan();}
+});
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===b.dataset.s));
+  scrollTo(0,0);
+});
+$('exportBtn').onclick=()=>{const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='wedding-tracker-backup.json'; a.click();};
+$('importFile').onchange=e=>{const f=e.target.files[0]; if(!f)return; f.text().then(t=>{try{S=JSON.parse(t); save(); renderAll();}catch(err){alert('That file could not be read.')}});};
+
+/* ---------- Weather (Open-Meteo, no key) ---------- */
+const WX={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌦️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'❄️',77:'🌨️',80:'🌦️',81:'🌧️',82:'⛈️',85:'🌨️',86:'❄️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const mph=k=>Math.round(k*0.621);
+
+async function weather(){
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&timezone=Europe%2FLondon&forecast_days=16`+
+    `&hourly=precipitation_probability,precipitation,temperature_2m,wind_gusts_10m,weather_code`+
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,sunrise,sunset`;
+  let data,stale=false;
+  try{const r=await fetch(url); if(!r.ok) throw 0; data=await r.json(); data._at=Date.now(); try{localStorage.setItem('wt_wx',JSON.stringify(data))}catch(e){}}
+  catch(e){try{data=JSON.parse(localStorage.getItem('wt_wx'))}catch(_){} stale=true}
+  if(!data){$('wxVerdict').textContent='No forecast yet – connect to the internet and reopen.';return}
+  drawWeather(data,stale);
+}
+
+function drawWeather(d,stale){
+  const h=d.hourly, D=d.daily;
+  const idx=h.time.map((t,i)=>[t,i]).filter(([t])=>t.startsWith(WEDDING)&&+t.slice(11,13)>=10&&+t.slice(11,13)<=23).map(([,i])=>i);
+  const lead=Math.round((new Date(WEDDING)-new Date(new Date().toDateString()))/864e5);
+  const conf=lead<=3?'good confidence':lead<=7?'fair confidence – will firm up':'early look – treat as a rough guide';
+  if(!idx.length){$('wxVerdict').textContent='Wedding day not in the forecast range yet.';}
+  else{
+    const maxP=Math.max(...idx.map(i=>h.precipitation_probability[i]??0));
+    const tot=idx.reduce((s,i)=>s+(h.precipitation[i]||0),0);
+    const lvl=maxP<25?['low','Low']:maxP<55?['mid','Moderate']:['high','High'];
+    const wet=idx.filter(i=>(h.precipitation_probability[i]??0)>=40).map(i=>h.time[i].slice(11,16));
+    $('wxVerdict').innerHTML=`<span class="pill ${lvl[0]}">${lvl[1]} rain risk</span> <span style="margin-left:6px">peak ${maxP}% · ~${tot.toFixed(1)} mm 10:00–midnight</span>`+
+      (wet.length?`<div class="muted" style="margin-top:6px">Wettest-looking hours: ${wet.slice(0,6).join(', ')}${wet.length>6?'…':''}</div>`:'');
+    $('wxHours').innerHTML=idx.map(i=>{const p=h.precipitation_probability[i]??0;return `<div class="hr">${h.time[i].slice(11,13)}:00<div>${WX[h.weather_code[i]]||''}</div><div class="bar"><i style="height:${Math.max(2,p*.36)}px;opacity:${.35+p/150}"></i></div>${p}%<div class="muted">${Math.round(h.temperature_2m[i])}°</div></div>`}).join('');
+  }
+  const age=d._at?new Date(d._at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit'}):'';
+  $('wxMeta').textContent=`${lead>0?lead+' days out':'Today'} – ${conf}. Updated ${age}${stale?' (offline copy)':''}.`;
+
+  // run-up strip: today → wedding day
+  const days=D.time.map((t,i)=>({t,i})).filter(x=>x.t<=WEDDING);
+  $('wxDays').innerHTML=days.map(({t,i})=>{const dt=new Date(t);return `<div class="day ${t===WEDDING?'w':''}"><b>${DOW[dt.getDay()]} ${dt.getDate()}</b><div style="font-size:1.3rem">${WX[D.weather_code[i]]||''}</div>${Math.round(D.temperature_2m_max[i])}° / ${Math.round(D.temperature_2m_min[i])}°<div class="muted">☔ ${D.precipitation_probability_max[i]??0}%</div></div>`}).join('');
+
+  // tips for the day
+  const wi=D.time.indexOf(WEDDING);
+  if(wi<0){$('tips').textContent='Tips appear once the wedding day is in range.';return}
+  const ss=D.sunset[wi].slice(11,16), sr=D.sunrise[wi].slice(11,16);
+  const [sh,sm]=ss.split(':').map(Number); const gh=new Date(0,0,0,sh,sm-60);
+  const gust=mph(D.wind_gusts_10m_max[wi]); const tmax=Math.round(D.temperature_2m_max[wi]);
+  const eve=h.time.map((t,i)=>[t,i]).filter(([t])=>t.startsWith(WEDDING)&&+t.slice(11,13)>=19&&+t.slice(11,13)<=23).map(([,i])=>h.temperature_2m[i]);
+  const tEve=eve.length?Math.round(Math.min(...eve)):null;
+  const tips=[
+    `🌅 Sunset ${ss} (sunrise ${sr}). Golden hour for outdoor photos from about ${gh.toTimeString().slice(0,5)} – worth telling the photographer.`,
+    `🌡️ High of ${tmax}°C${tEve!==null?`, dropping to ~${tEve}°C in the evening`:''}. ${tEve!==null&&tEve<11?'Chilly for the car park area – guests will want coats; consider patio heaters or keeping the outdoor bit short.':'Comfortable for time outside.'}`,
+    `💨 Gusts up to ${gust} mph. ${gust>=30?'Too windy for gazebos or light decorations outside – weigh them down or skip them.':gust>=20?'Breezy – weigh down anything outdoors (gazebos, signs, table covers).':'Calm enough for outdoor bits.'}`,
+    `☔ Rain plan: ${($('wxVerdict').textContent.includes('Low'))?'looking fine, but keep a few umbrellas at the church door just in case.':'have umbrellas at the church door and a dry spot for group photos, and be ready to keep the reception indoors.'}`,
+    `🕐 Clocks don't change until 25 October, so no surprises there.`
+  ];
+  $('tips').innerHTML=tips.map(t=>`<div class="tip">${t}</div>`).join('');
+}
+
+function renderAll(){renderTasks();renderMoney();renderPlan();countdown();}
+renderAll(); weather();
+setInterval(weather, 30*60*1000);
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
